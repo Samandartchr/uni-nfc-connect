@@ -14,6 +14,7 @@ const dict: Dict = {
   "nav.feed": { ru: "Лента", kz: "Лента" },
   "nav.messages": { ru: "Сообщения", kz: "Хабарлар" },
   "nav.profile": { ru: "Профиль", kz: "Профиль" },
+  "nav.grow": { ru: "Net & Grow", kz: "Net & Grow" },
   "nav.signin": { ru: "Войти", kz: "Кіру" },
   "nav.signup": { ru: "Регистрация", kz: "Тіркелу" },
   "nav.signout": { ru: "Выйти", kz: "Шығу" },
@@ -103,6 +104,23 @@ const dict: Dict = {
   "nfc.tap": { ru: "Тапни брелок", kz: "Брелокқа тигіз" },
   "nfc.scanning": { ru: "Сканирую…", kz: "Сканерлеп жатырмын…" },
   "nfc.success": { ru: "Профиль найден!", kz: "Профиль табылды!" },
+
+  // Net & Grow
+  "grow.title": { ru: "Net & Grow", kz: "Net & Grow" },
+  "grow.sub": { ru: "Найди партнёра по целям и интересам.", kz: "Мақсат пен қызығушылық бойынша серіктес тап." },
+  "grow.tab.goals": { ru: "По целям", kz: "Мақсаттар" },
+  "grow.tab.interests": { ru: "По интересам", kz: "Қызығушылықтар" },
+  "grow.search.goals": { ru: "Поиск: ICPC, Startup, IELTS…", kz: "Іздеу: ICPC, Startup, IELTS…" },
+  "grow.search.tags": { ru: "Поиск тега: #coding, #debate…", kz: "Тег іздеу: #coding, #debate…" },
+  "grow.match": { ru: "Сәйкестік", kz: "Сәйкестік" },
+  "grow.similar": { ru: "Похожая цель!", kz: "Сізге ұқсас мақсат!" },
+  "grow.smart": { ru: "Smart Match", kz: "Smart Match" },
+  "grow.smart.title": { ru: "Топ рекомендованных партнёров", kz: "Үздік ұсынылған серіктестер" },
+  "grow.invite": { ru: "Пригласить к сотрудничеству", kz: "Бірлесуге шақыру" },
+  "grow.invited": { ru: "Запрос отправлен", kz: "Сұраныс жіберілді" },
+  "grow.empty": { ru: "Используй время с пользой! Добавь свою цель и найди партнёра.", kz: "Бос уақытыңды тиімді пайдалан! Өз мақсатыңды қос та, серіктес тап." },
+  "grow.tag.people": { ru: "интересуются этим", kz: "осыған қызығады" },
+  "grow.level": { ru: "Уровень", kz: "Деңгей" },
 };
 
 interface I18nCtx {

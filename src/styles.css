@@ -165,6 +165,17 @@
     background: var(--gradient-glow);
   }
 
+  .bg-gradient-grow {
+    background: linear-gradient(135deg, oklch(0.78 0.14 165), oklch(0.72 0.16 220));
+  }
+
+  .grow-hero {
+    background:
+      radial-gradient(circle at 0% 0%, oklch(0.78 0.14 165 / 25%), transparent 55%),
+      radial-gradient(circle at 100% 100%, oklch(0.72 0.16 220 / 30%), transparent 55%),
+      var(--surface-low);
+  }
+
   .glass {
     background: oklch(0.27 0.06 272 / 60%);
     backdrop-filter: blur(28px) saturate(140%);

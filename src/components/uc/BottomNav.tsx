@@ -1,9 +1,10 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, MessageSquare, User, Newspaper } from "lucide-react";
+import { MessageSquare, User, Newspaper, Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 const items = [
   { to: "/feed", icon: Newspaper, key: "nav.feed" },
+  { to: "/grow", icon: Sparkles, key: "nav.grow" },
   { to: "/messages", icon: MessageSquare, key: "nav.messages" },
   { to: "/profile", icon: User, key: "nav.profile" },
 ] as const;
