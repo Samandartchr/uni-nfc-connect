@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -25,41 +25,27 @@ export function Header() {
         <div className="flex items-center gap-1.5">
           <div className="hidden items-center gap-1 rounded-full bg-surface-low p-1 sm:flex">
             {(["ru", "kz", "en", "tr"] as const).map((l) => (
-              <button
-                key={l}
-                onClick={() => setLang(l)}
-                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${lang === l ? "bg-gradient-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              >{l.toUpperCase()}</button>
+              <button key={l} onClick={() => setLang(l)}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${lang === l ? "bg-gradient-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                {l.toUpperCase()}
+              </button>
             ))}
           </div>
-          <button
-            onClick={() => {
+          <button onClick={() => {
               const order = ["ru", "kz", "en", "tr"] as const;
               const next = order[(order.indexOf(lang as typeof order[number]) + 1) % order.length];
               setLang(next);
-            }}
-            className="rounded-full bg-surface-low px-3 py-1.5 text-xs font-bold sm:hidden"
-          >{lang.toUpperCase()}</button>
+            }} className="rounded-full bg-surface-low px-3 py-1.5 text-xs font-bold sm:hidden">{lang.toUpperCase()}</button>
 
           {user ? (
             <>
-              {!onApp && (
-                <Button asChild variant="ghost" size="sm">
-                  <Link to="/feed">{t("nav.feed")}</Link>
-                </Button>
-              )}
-              <Button onClick={() => signOut()} variant="ghost" size="sm" className="hidden sm:inline-flex">
-                {t("nav.signout")}
-              </Button>
+              {!onApp && (<Button asChild variant="ghost" size="sm"><Link to="/feed">{t("nav.feed")}</Link></Button>)}
+              <Button onClick={() => signOut()} variant="ghost" size="sm" className="hidden sm:inline-flex">{t("nav.signout")}</Button>
             </>
           ) : (
             <>
-              <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
-                <Link to="/auth">{t("nav.signin")}</Link>
-              </Button>
-              <Button asChild size="sm" variant="hero">
-                <Link to="/auth">{t("nav.signup")}</Link>
-              </Button>
+              <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex"><Link to="/auth">{t("nav.signin")}</Link></Button>
+              <Button asChild size="sm" variant="hero"><Link to="/auth">{t("nav.signup")}</Link></Button>
             </>
           )}
         </div>
