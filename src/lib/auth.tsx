@@ -1,10 +1,13 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+
+interface MockUser {
+  id: string;
+  email: string;
+  full_name: string;
+}
 
 interface AuthCtx {
-  user: User | null;
-  session: Session | null;
+  user: MockUser | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
@@ -12,52 +15,48 @@ interface AuthCtx {
 }
 
 const AuthContext = createContext<AuthCtx | null>(null);
+const STORAGE_KEY = "uc.mock.user";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<MockUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up listener FIRST
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
+    if (typeof window === "undefined") {
       setLoading(false);
-    });
-    // Then fetch existing
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-      setLoading(false);
-    });
-    return () => sub.subscription.unsubscribe();
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) setUser(JSON.parse(raw));
+    } catch {}
+    setLoading(false);
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+  const persist = (u: MockUser | null) => {
+    setUser(u);
+    if (typeof window === "undefined") return;
+    if (u) localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
+    else localStorage.removeItem(STORAGE_KEY);
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
-    const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}/feed` : undefined;
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: { full_name: fullName },
-      },
-    });
-    return { error: error?.message ?? null };
+  const signIn = async (email: string, _password: string) => {
+    const name = email.split("@")[0] || "Demo User";
+    persist({ id: "demo-user", email, full_name: name.charAt(0).toUpperCase() + name.slice(1) });
+    return { error: null };
+  };
+
+  const signUp = async (email: string, _password: string, fullName: string) => {
+    persist({ id: "demo-user", email, full_name: fullName || "Demo User" });
+    return { error: null };
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    persist(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );

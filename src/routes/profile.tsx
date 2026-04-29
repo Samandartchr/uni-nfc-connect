@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { supabase } from "@/integrations/supabase/client";
+import { myProfile, type MockProfile } from "@/lib/mockData";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/profile")({
@@ -16,68 +16,31 @@ export const Route = createFileRoute("/profile")({
   component: ProfilePage,
 });
 
-interface Profile {
-  id: string;
-  full_name: string;
-  faculty: string;
-  course: string;
-  about: string;
-  interests: string[];
-  goals: string[];
-  avatar_url: string;
-  is_pro: boolean;
-  nfc_code: string;
-}
-
 function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { t } = useI18n();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<MockProfile>({ ...myProfile, full_name: myProfile.full_name });
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<Profile | null>(null);
-  const [visitors, setVisitors] = useState<number>(0);
+  const [draft, setDraft] = useState<MockProfile>(profile);
   const [scanning, setScanning] = useState(false);
+  const visitors = 12;
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-      if (data) {
-        setProfile(data as Profile);
-        setDraft(data as Profile);
-      }
-      const { count } = await supabase
-        .from("profile_visits")
-        .select("*", { count: "exact", head: true })
-        .eq("profile_id", user.id);
-      setVisitors(count ?? 0);
-    })();
+    if (user) {
+      setProfile((p) => ({ ...p, full_name: user.full_name || p.full_name }));
+      setDraft((p) => ({ ...p, full_name: user.full_name || p.full_name }));
+    }
   }, [user]);
 
-  const save = async () => {
-    if (!draft) return;
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        full_name: draft.full_name,
-        faculty: draft.faculty,
-        course: draft.course,
-        about: draft.about,
-        interests: draft.interests,
-        goals: draft.goals,
-      })
-      .eq("id", draft.id);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Saved");
-      setProfile(draft);
-      setEditing(false);
-    }
+  const save = () => {
+    setProfile(draft);
+    setEditing(false);
+    toast.success("Saved");
   };
 
   const fakeScan = () => {
@@ -88,13 +51,12 @@ function ProfilePage() {
     }, 1600);
   };
 
-  if (authLoading || !user || !profile) return null;
-  const p = editing ? draft! : profile;
+  if (authLoading || !user) return null;
+  const p = editing ? draft : profile;
 
   return (
     <AppLayout>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        {/* Avatar + name */}
         <div className="flex flex-col items-center pt-2 text-center">
           <div className="relative">
             <div className="h-28 w-28 rounded-full bg-gradient-primary p-1 shadow-glow-strong">
@@ -123,7 +85,6 @@ function ProfilePage() {
           )}
         </div>
 
-        {/* Edit toggles */}
         <div className="mt-5 flex justify-center gap-2">
           {editing ? (
             <>
@@ -135,7 +96,6 @@ function ProfilePage() {
           )}
         </div>
 
-        {/* About */}
         <Section label={t("prof.about")}>
           {editing ? (
             <Textarea value={p.about} onChange={(e) => setDraft({ ...p, about: e.target.value })} className="border-0 bg-transparent" maxLength={300} />
@@ -144,7 +104,6 @@ function ProfilePage() {
           )}
         </Section>
 
-        {/* Goals */}
         <Section label={t("prof.goals")}>
           {editing ? (
             <Input value={p.goals.join(", ")} onChange={(e) => setDraft({ ...p, goals: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} placeholder="English B1→B2, Startup, ICPC" className="border-0 bg-transparent" />
@@ -157,7 +116,6 @@ function ProfilePage() {
           ) : <p className="text-sm text-muted-foreground">—</p>}
         </Section>
 
-        {/* Interests */}
         <Section label={t("prof.interests")}>
           {editing ? (
             <Input value={p.interests.join(", ")} onChange={(e) => setDraft({ ...p, interests: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} placeholder="finte, AI, chess" className="border-0 bg-transparent" />
@@ -170,15 +128,13 @@ function ProfilePage() {
           ) : <p className="text-sm text-muted-foreground">—</p>}
         </Section>
 
-        {/* Visitors */}
         <Section label={t("prof.visitors")} extra={<span className="text-xs text-primary">{visitors} {t("prof.new")}</span>}>
           <div className="flex items-center gap-2">
             <Eye className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">{visitors > 0 ? `${visitors} unique visits` : "—"}</span>
+            <span className="text-sm text-muted-foreground">{visitors} unique visits</span>
           </div>
         </Section>
 
-        {/* Found a key */}
         <div className="mt-6 rounded-3xl bg-surface-low p-5">
           <div className="flex items-start gap-3">
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-surface-highest text-primary">
@@ -188,7 +144,6 @@ function ProfilePage() {
           </div>
         </div>
 
-        {/* NFC scan button */}
         <button
           onClick={fakeScan}
           disabled={scanning}

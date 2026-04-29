@@ -7,23 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { supabase } from "@/integrations/supabase/client";
+import { myProfile, peers, type MockProfile } from "@/lib/mockData";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/grow")({
   head: () => ({ meta: [{ title: "Net & Grow — UniConnect" }] }),
   component: GrowPage,
 });
-
-interface PeerProfile {
-  id: string;
-  full_name: string;
-  faculty: string | null;
-  course: string | null;
-  about: string | null;
-  goals: string[];
-  interests: string[];
-}
 
 type Tab = "goals" | "interests";
 
@@ -33,8 +23,6 @@ function GrowPage() {
   const { t } = useI18n();
 
   const [tab, setTab] = useState<Tab>("goals");
-  const [me, setMe] = useState<PeerProfile | null>(null);
-  const [peers, setPeers] = useState<PeerProfile[]>([]);
   const [q, setQ] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [smartOpen, setSmartOpen] = useState(false);
@@ -44,38 +32,9 @@ function GrowPage() {
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [user, authLoading, navigate]);
 
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { data: mine } = await supabase
-        .from("profiles")
-        .select("id, full_name, faculty, course, about, goals, interests")
-        .eq("id", user.id)
-        .single();
-      if (mine) setMe(normalize(mine));
-
-      const { data: others, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, faculty, course, about, goals, interests")
-        .neq("id", user.id)
-        .limit(100);
-      if (error) toast.error(error.message);
-      setPeers((others ?? []).map(normalize));
-
-      const { data: existing } = await supabase
-        .from("friendships")
-        .select("addressee_id, requester_id")
-        .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
-      const ids = new Set<string>();
-      (existing ?? []).forEach((f) => {
-        ids.add(f.requester_id === user.id ? f.addressee_id : f.requester_id);
-      });
-      setSent(ids);
-    })();
-  }, [user]);
-
-  const myGoals = useMemo(() => new Set((me?.goals ?? []).map(norm)), [me]);
-  const myInterests = useMemo(() => new Set((me?.interests ?? []).map(norm)), [me]);
+  const me: MockProfile = myProfile;
+  const myGoals = useMemo(() => new Set(me.goals.map(norm)), [me]);
+  const myInterests = useMemo(() => new Set(me.interests.map(norm)), [me]);
 
   const scored = useMemo(() => {
     return peers.map((p) => {
@@ -86,7 +45,7 @@ function GrowPage() {
       const score = Math.round(((gOverlap / gTotal) * 0.6 + (iOverlap / iTotal) * 0.4) * 100);
       return { p, gOverlap, iOverlap, score };
     });
-  }, [peers, myGoals, myInterests]);
+  }, [myGoals, myInterests]);
 
   const filteredGoals = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -97,7 +56,7 @@ function GrowPage() {
   }, [scored, q]);
 
   const tagBuckets = useMemo(() => {
-    const map = new Map<string, PeerProfile[]>();
+    const map = new Map<string, MockProfile[]>();
     peers.forEach((p) => {
       p.interests.forEach((tag) => {
         const k = tag.replace(/^#/, "").toLowerCase();
@@ -110,7 +69,7 @@ function GrowPage() {
     return [...map.entries()]
       .map(([tag, list]) => ({ tag, list }))
       .sort((a, b) => b.list.length - a.list.length);
-  }, [peers]);
+  }, []);
 
   const filteredTags = useMemo(() => {
     const s = q.trim().toLowerCase().replace(/^#/, "");
@@ -118,24 +77,17 @@ function GrowPage() {
   }, [tagBuckets, q]);
 
   const tagPeers = activeTag ? tagBuckets.find((b) => b.tag === activeTag)?.list ?? [] : [];
+  const topMatches = useMemo(() => scored.filter((x) => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 5), [scored]);
 
-  const topMatches = useMemo(() => scored.filter((x) => x.score > 0).slice(0, 5), [scored]);
-
-  const connect = async (peerId: string) => {
-    if (!user) return;
-    const { error } = await supabase.from("friendships").insert({ requester_id: user.id, addressee_id: peerId, status: "pending" });
-    if (error) toast.error(error.message);
-    else {
-      setSent((s) => new Set(s).add(peerId));
-      toast.success(t("grow.invited"));
-    }
+  const connect = (peerId: string) => {
+    setSent((s) => new Set(s).add(peerId));
+    toast.success(t("grow.invited"));
   };
 
   if (authLoading || !user) return null;
 
   return (
     <AppLayout>
-      {/* Hero */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative mb-6 overflow-hidden rounded-3xl p-6 grow-hero">
         <div className="relative">
           <div className="mb-2 flex items-center gap-2 text-label text-secondary">
@@ -151,7 +103,6 @@ function GrowPage() {
         </div>
       </motion.div>
 
-      {/* Smart Match panel */}
       <AnimatePresence>
         {smartOpen && (
           <motion.div
@@ -189,7 +140,6 @@ function GrowPage() {
         )}
       </AnimatePresence>
 
-      {/* Tabs */}
       <div className="mb-4 flex gap-2 rounded-2xl bg-surface-low p-1">
         <TabButton active={tab === "goals"} onClick={() => { setTab("goals"); setQ(""); setActiveTag(null); }} icon={Target}>
           {t("grow.tab.goals")}
@@ -199,7 +149,6 @@ function GrowPage() {
         </TabButton>
       </div>
 
-      {/* Search */}
       <div className="relative mb-4">
         <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -210,7 +159,6 @@ function GrowPage() {
         />
       </div>
 
-      {/* Content */}
       {tab === "goals" ? (
         filteredGoals.length === 0 ? (
           <EmptyHint text={t("grow.empty")} />
@@ -229,7 +177,7 @@ function GrowPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="font-semibold">{p.full_name}</div>
-                      {score >= 50 && <MatchBadge score={score} />}
+                      {score >= 20 && <MatchBadge score={score} />}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {p.faculty || "—"}{p.course ? ` · ${t("grow.level")} ${p.course}` : ""}
@@ -247,12 +195,9 @@ function GrowPage() {
                         );
                       })}
                     </div>
-                    {(() => {
-                      const sim = p.goals.find((g) => myGoals.has(norm(g)));
-                      return sim ? (
-                        <div className="mt-2 text-xs font-semibold text-secondary">{t("grow.similar")}</div>
-                      ) : null;
-                    })()}
+                    {p.goals.some((g) => myGoals.has(norm(g))) && (
+                      <div className="mt-2 text-xs font-semibold text-secondary">{t("grow.similar")}</div>
+                    )}
                   </div>
                   <ConnectButton sent={sent.has(p.id)} onClick={() => connect(p.id)} label={t("grow.invite")} sentLabel={t("grow.invited")} />
                 </div>
@@ -309,18 +254,6 @@ function GrowPage() {
   );
 }
 
-/* helpers */
-function normalize(p: any): PeerProfile {
-  return {
-    id: p.id,
-    full_name: p.full_name ?? "—",
-    faculty: p.faculty,
-    course: p.course,
-    about: p.about,
-    goals: (p.goals ?? []).filter(Boolean),
-    interests: (p.interests ?? []).filter(Boolean),
-  };
-}
 const norm = (s: string) => s.trim().toLowerCase().replace(/^#/, "");
 
 function MatchBadge({ score }: { score: number }) {
