@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Heart, MessageCircle, Sparkles, Send } from "lucide-react";
@@ -10,12 +10,7 @@ import { useI18n } from "@/lib/i18n";
 import { initialPosts, type MockPost } from "@/lib/mockData";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/feed")({
-  head: () => ({ meta: [{ title: "Лента — UniConnect" }] }),
-  component: FeedPage,
-});
-
-function FeedPage() {
+export default function FeedPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { t } = useI18n();
@@ -23,21 +18,14 @@ function FeedPage() {
   const [content, setContent] = useState("");
   const [liked, setLiked] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (!authLoading && !user) navigate({ to: "/auth" });
-  }, [user, authLoading, navigate]);
+  useEffect(() => { if (!authLoading && !user) navigate("/auth"); }, [user, authLoading, navigate]);
 
   const submit = () => {
     if (!content.trim() || !user) return;
     const post: MockPost = {
-      id: `local-${Date.now()}`,
-      author_id: user.id,
-      author_name: user.full_name,
-      faculty: "UniConnect",
-      content: content.trim(),
-      created_at: new Date().toISOString(),
-      likes_count: 0,
-      comments_count: 0,
+      id: `local-${Date.now()}`, author_id: user.id, author_name: user.full_name,
+      faculty: "UniConnect", content: content.trim(), created_at: new Date().toISOString(),
+      likes_count: 0, comments_count: 0,
     };
     setPosts((prev) => [post, ...prev]);
     setContent("");
@@ -48,8 +36,7 @@ function FeedPage() {
     setLiked((prev) => {
       const next = new Set(prev);
       const isLiked = next.has(id);
-      if (isLiked) next.delete(id);
-      else next.add(id);
+      if (isLiked) next.delete(id); else next.add(id);
       setPosts((ps) => ps.map((p) => (p.id === id ? { ...p, likes_count: p.likes_count + (isLiked ? -1 : 1) } : p)));
       return next;
     });
@@ -65,13 +52,8 @@ function FeedPage() {
       </div>
 
       <div className="mb-6 rounded-3xl bg-surface-low p-5">
-        <Textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={t("feed.placeholder")}
-          className="min-h-[80px] resize-none border-0 bg-transparent text-base focus-visible:ring-0"
-          maxLength={500}
-        />
+        <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder={t("feed.placeholder")}
+          className="min-h-[80px] resize-none border-0 bg-transparent text-base focus-visible:ring-0" maxLength={500} />
         <div className="mt-3 flex items-center justify-between">
           <span className="text-xs text-muted-foreground">{content.length}/500</span>
           <Button onClick={submit} disabled={!content.trim()} variant="hero" size="sm">
@@ -85,13 +67,8 @@ function FeedPage() {
       ) : (
         <div className="space-y-3">
           {posts.map((p, i) => (
-            <motion.article
-              key={p.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: Math.min(i * 0.04, 0.4) }}
-              className="rounded-3xl bg-surface-low p-5 transition hover:bg-surface-high"
-            >
+            <motion.article key={p.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i * 0.04, 0.4) }}
+              className="rounded-3xl bg-surface-low p-5 transition hover:bg-surface-high">
               <header className="mb-3 flex items-center gap-3">
                 <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-primary font-bold text-primary-foreground">
                   {p.author_name[0]?.toUpperCase()}

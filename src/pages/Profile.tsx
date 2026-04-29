@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Edit3, Radio, Save, X, KeyRound, Eye } from "lucide-react";
@@ -11,24 +11,17 @@ import { useI18n } from "@/lib/i18n";
 import { myProfile, type MockProfile } from "@/lib/mockData";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/profile")({
-  head: () => ({ meta: [{ title: "Профиль — UniConnect" }] }),
-  component: ProfilePage,
-});
-
-function ProfilePage() {
+export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { t } = useI18n();
-  const [profile, setProfile] = useState<MockProfile>({ ...myProfile, full_name: myProfile.full_name });
+  const [profile, setProfile] = useState<MockProfile>({ ...myProfile });
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<MockProfile>(profile);
   const [scanning, setScanning] = useState(false);
   const visitors = 12;
 
-  useEffect(() => {
-    if (!authLoading && !user) navigate({ to: "/auth" });
-  }, [user, authLoading, navigate]);
+  useEffect(() => { if (!authLoading && !user) navigate("/auth"); }, [user, authLoading, navigate]);
 
   useEffect(() => {
     if (user) {
@@ -37,18 +30,10 @@ function ProfilePage() {
     }
   }, [user]);
 
-  const save = () => {
-    setProfile(draft);
-    setEditing(false);
-    toast.success("Saved");
-  };
-
+  const save = () => { setProfile(draft); setEditing(false); toast.success("Saved"); };
   const fakeScan = () => {
     setScanning(true);
-    setTimeout(() => {
-      setScanning(false);
-      toast.success(t("nfc.success"));
-    }, 1600);
+    setTimeout(() => { setScanning(false); toast.success(t("nfc.success")); }, 1600);
   };
 
   if (authLoading || !user) return null;
@@ -79,9 +64,7 @@ function ProfilePage() {
               <Input value={p.course} placeholder={t("prof.course")} onChange={(e) => setDraft({ ...p, course: e.target.value })} />
             </div>
           ) : (
-            <p className="mt-1 text-sm text-muted-foreground">
-              {p.faculty || "—"}{p.course ? ` · ${p.course}` : ""}
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{p.faculty || "—"}{p.course ? ` · ${p.course}` : ""}</p>
           )}
         </div>
 
@@ -109,9 +92,7 @@ function ProfilePage() {
             <Input value={p.goals.join(", ")} onChange={(e) => setDraft({ ...p, goals: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} placeholder="English B1→B2, Startup, ICPC" className="border-0 bg-transparent" />
           ) : p.goals.length ? (
             <div className="flex flex-wrap gap-2">
-              {p.goals.map((g) => (
-                <span key={g} className="rounded-2xl bg-surface-highest px-3.5 py-1.5 text-sm font-medium">{g}</span>
-              ))}
+              {p.goals.map((g) => (<span key={g} className="rounded-2xl bg-surface-highest px-3.5 py-1.5 text-sm font-medium">{g}</span>))}
             </div>
           ) : <p className="text-sm text-muted-foreground">—</p>}
         </Section>
@@ -121,9 +102,7 @@ function ProfilePage() {
             <Input value={p.interests.join(", ")} onChange={(e) => setDraft({ ...p, interests: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} placeholder="finte, AI, chess" className="border-0 bg-transparent" />
           ) : p.interests.length ? (
             <div className="flex flex-wrap gap-2">
-              {p.interests.map((i) => (
-                <span key={i} className="rounded-full bg-surface-highest px-3 py-1 text-xs font-semibold text-primary">#{i.replace(/^#/, "")}</span>
-              ))}
+              {p.interests.map((i) => (<span key={i} className="rounded-full bg-surface-highest px-3 py-1 text-xs font-semibold text-primary">#{i.replace(/^#/, "")}</span>))}
             </div>
           ) : <p className="text-sm text-muted-foreground">—</p>}
         </Section>
@@ -144,14 +123,9 @@ function ProfilePage() {
           </div>
         </div>
 
-        <button
-          onClick={fakeScan}
-          disabled={scanning}
-          className="relative mt-4 flex w-full items-center justify-center gap-3 overflow-hidden rounded-3xl bg-gradient-primary px-6 py-5 text-sm font-bold uppercase tracking-wider text-primary-foreground shadow-glow-strong transition hover:-translate-y-0.5"
-        >
-          {scanning && (
-            <span className="absolute inset-0 ripple-ring rounded-3xl bg-primary/40" />
-          )}
+        <button onClick={fakeScan} disabled={scanning}
+          className="relative mt-4 flex w-full items-center justify-center gap-3 overflow-hidden rounded-3xl bg-gradient-primary px-6 py-5 text-sm font-bold uppercase tracking-wider text-primary-foreground shadow-glow-strong transition hover:-translate-y-0.5">
+          {scanning && (<span className="absolute inset-0 ripple-ring rounded-3xl bg-primary/40" />)}
           <span className="relative grid h-9 w-9 place-items-center rounded-full bg-primary-foreground/20">
             <Radio className="h-4 w-4" />
           </span>
