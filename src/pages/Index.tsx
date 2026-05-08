@@ -21,7 +21,11 @@ export default function Index() {
 
       <section className="relative mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pt-16 lg:pb-28 lg:pt-24">
         <div className="grid items-center gap-12 lg:grid-cols-2">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+          >
             <div className="text-label mb-5 text-primary/80">{t("land.welcome")}</div>
             <h1 className="text-display text-4xl sm:text-5xl lg:text-6xl">
               {t("land.title.l1")}
@@ -30,10 +34,14 @@ export default function Index() {
                 {t("land.title.l2")}
               </span>
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">{t("land.intro")}</p>
+            <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+              {t("land.intro")}
+            </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild variant="hero" size="lg">
-                <Link to="/auth">{t("land.cta.start")} <ArrowRight className="h-4 w-4" /></Link>
+                <Link to="/auth">
+                  {t("land.cta.start")} <ArrowRight className="h-4 w-4" />
+                </Link>
               </Button>
               <Button asChild variant="glass" size="lg">
                 <a href="#how">{t("land.cta.more")}</a>
@@ -42,11 +50,17 @@ export default function Index() {
             <div className="text-label mt-10 text-muted-foreground/70">{t("brand.subline")}</div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, delay: 0.15 }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.15 }}
+          >
             <div className="relative">
               <div className="absolute -inset-10 -z-10 bg-gradient-glow blur-3xl" />
               <NfcDemo />
-              <div className="mx-auto mt-6 max-w-xs text-center text-sm text-muted-foreground">{t("land.demo.sub")}</div>
+              <div className="mx-auto mt-6 max-w-xs text-center text-sm text-muted-foreground">
+                {t("land.demo.sub")}
+              </div>
             </div>
           </motion.div>
         </div>
@@ -59,8 +73,14 @@ export default function Index() {
         </div>
         <div className="grid gap-6 md:grid-cols-3">
           {features.map((f, i) => (
-            <motion.div key={f.k} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-              className="group relative overflow-hidden rounded-3xl bg-surface-low p-7 transition hover:bg-surface-high">
+            <motion.div
+              key={f.k}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              className="group relative overflow-hidden rounded-3xl bg-surface-low p-7 transition hover:bg-surface-high"
+            >
               <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-gradient-glow opacity-0 transition group-hover:opacity-100" />
               <div className="relative">
                 <div className="mb-5 inline-grid h-12 w-12 place-items-center rounded-2xl bg-surface-highest text-primary">
@@ -75,15 +95,28 @@ export default function Index() {
       </section>
 
       <section className="relative mx-auto max-w-4xl px-4 py-20 sm:px-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          className="relative overflow-hidden rounded-[2.5rem] bg-gradient-primary p-10 text-center sm:p-16">
-          <div className="absolute inset-0 opacity-30" style={{ background: "radial-gradient(circle at 30% 20%, white 0%, transparent 50%)" }} />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="relative overflow-hidden rounded-[2.5rem] bg-gradient-primary p-10 text-center sm:p-16"
+        >
+          <div
+            className="absolute inset-0 opacity-30"
+            style={{ background: "radial-gradient(circle at 30% 20%, white 0%, transparent 50%)" }}
+          />
           <Zap className="relative mx-auto mb-4 h-10 w-10 text-primary-foreground" />
-          <h2 className="text-display relative text-3xl text-primary-foreground sm:text-4xl">{t("land.cta.final.t")}</h2>
-          <p className="relative mx-auto mt-3 max-w-md text-primary-foreground/80">{t("land.cta.final.s")}</p>
+          <h2 className="text-display relative text-3xl text-primary-foreground sm:text-4xl">
+            {t("land.cta.final.t")}
+          </h2>
+          <p className="relative mx-auto mt-3 max-w-md text-primary-foreground/80">
+            {t("land.cta.final.s")}
+          </p>
           <div className="relative mt-8 flex justify-center">
             <Button asChild variant="glass" size="xl">
-              <Link to="/auth">{t("land.cta.start")} <ArrowRight className="h-4 w-4" /></Link>
+              <Link to="/auth">
+                {t("land.cta.start")} <ArrowRight className="h-4 w-4" />
+              </Link>
             </Button>
           </div>
         </motion.div>

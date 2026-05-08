@@ -18,10 +18,22 @@ export function BottomNav() {
         {items.map(({ to, icon: Icon, key }) => {
           const active = loc.pathname.startsWith(to);
           return (
-            <Link key={to} to={to} className="relative flex flex-1 flex-col items-center gap-0.5 rounded-2xl px-2 py-2 tap-highlight-none transition">
-              {active && (<span className="absolute inset-x-4 -top-0.5 h-0.5 rounded-full bg-gradient-primary shadow-glow" />)}
-              <Icon className={`h-5 w-5 transition ${active ? "text-primary" : "text-muted-foreground"}`} />
-              <span className={`text-[10px] font-semibold uppercase tracking-wider ${active ? "text-foreground" : "text-muted-foreground"}`}>{t(key)}</span>
+            <Link
+              key={to}
+              to={to}
+              className="relative flex flex-1 flex-col items-center gap-0.5 rounded-2xl px-2 py-2 tap-highlight-none transition"
+            >
+              {active && (
+                <span className="absolute inset-x-4 -top-0.5 h-0.5 rounded-full bg-gradient-primary shadow-glow" />
+              )}
+              <Icon
+                className={`h-5 w-5 transition ${active ? "text-primary" : "text-muted-foreground"}`}
+              />
+              <span
+                className={`text-[10px] font-semibold uppercase tracking-wider ${active ? "text-foreground" : "text-muted-foreground"}`}
+              >
+                {t(key)}
+              </span>
             </Link>
           );
         })}

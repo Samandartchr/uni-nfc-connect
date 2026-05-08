@@ -1,62 +1,242 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  reload,
+  sendEmailVerification,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut as firebaseSignOut,
+  updateProfile,
+  type User,
+} from "firebase/auth";
+import { appleProvider, auth, googleProvider } from "@/lib/firebase";
+import { callApiRequest } from "@/lib/api";
 
-interface MockUser {
+interface AuthUser {
   id: string;
   email: string;
   full_name: string;
+  email_verified: boolean;
+}
+
+interface AuthResult {
+  error: string | null;
+  message?: string;
 }
 
 interface AuthCtx {
-  user: MockUser | null;
+  user: AuthUser | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string) => Promise<AuthResult>;
+  signUp: (email: string, password: string, fullName: string) => Promise<AuthResult>;
+  signInWithGoogle: () => Promise<AuthResult>;
+  signInWithApple: () => Promise<AuthResult>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthCtx | null>(null);
-const STORAGE_KEY = "uc.mock.user";
+
+function toAuthUser(user: User): AuthUser {
+  const fallbackName =
+    user.displayName?.trim() || user.email?.split("@")[0]?.trim() || "UniConnect User";
+
+  return {
+    id: user.uid,
+    email: user.email ?? "",
+    full_name: fallbackName,
+    email_verified: user.emailVerified,
+  };
+}
+
+function getFullName(user: User) {
+  return user.displayName?.trim() || user.email?.split("@")[0]?.trim() || "UniConnect User";
+}
+
+function isPasswordUser(user: User) {
+  return user.providerData.some((provider) => provider.providerId === "password");
+}
+
+async function syncRegisteredUser(user: User, provider: "password" | "google" | "apple") {
+  try {
+    const response = await callApiRequest({
+      Email: user.email ?? "",
+      Name: getFullName(user),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Registration sync failed:", response.status, errorText);
+      return {
+        error:
+          errorText || "Your account was authenticated, but the backend registration failed.",
+      };
+    }
+
+    return { error: null };
+  } catch (error) {
+    console.error("Registration sync request failed:", error);
+    return { error: "Could not reach the backend. Please try again." };
+  }
+}
+
+function formatAuthError(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string"
+  ) {
+    switch (error.code) {
+      case "auth/email-already-in-use":
+        return "This email is already in use.";
+      case "auth/invalid-credential":
+      case "auth/wrong-password":
+      case "auth/user-not-found":
+        return "Invalid email or password.";
+      case "auth/popup-closed-by-user":
+        return "The sign-in popup was closed before completing authentication.";
+      case "auth/cancelled-popup-request":
+        return "Another sign-in popup is already open.";
+      case "auth/account-exists-with-different-credential":
+        return "An account already exists with a different sign-in method.";
+      case "auth/weak-password":
+        return "Password should be at least 6 characters.";
+      case "auth/too-many-requests":
+        return "Too many attempts. Please try again later.";
+      case "auth/unauthorized-domain":
+        return "This domain is not authorized in Firebase Authentication.";
+      default:
+        break;
+    }
+  }
+
+  return "Authentication failed. Please try again.";
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<MockUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
+      if (!nextUser) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      await reload(nextUser);
+
+      if (isPasswordUser(nextUser) && !nextUser.emailVerified) {
+        await firebaseSignOut(auth);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      setUser(toAuthUser(nextUser));
       setLoading(false);
-      return;
-    }
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setUser(JSON.parse(raw));
-    } catch {}
-    setLoading(false);
+    });
+
+    return unsubscribe;
   }, []);
 
-  const persist = (u: MockUser | null) => {
-    setUser(u);
-    if (typeof window === "undefined") return;
-    if (u) localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
-    else localStorage.removeItem(STORAGE_KEY);
+  const signIn = async (email: string, password: string) => {
+    try {
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      await reload(credential.user);
+
+      if (!credential.user.emailVerified) {
+        await firebaseSignOut(auth);
+        return { error: "Please verify your email before signing in." };
+      }
+
+      const syncResult = await syncRegisteredUser(credential.user, "password");
+      if (syncResult?.error) {
+        await firebaseSignOut(auth);
+        return syncResult;
+      }
+
+      return { error: null, message: "Welcome back!" };
+    } catch (error) {
+      return { error: formatAuthError(error) };
+    }
   };
 
-  const signIn = async (email: string, _password: string) => {
-    const name = email.split("@")[0] || "Demo User";
-    persist({ id: "demo-user", email, full_name: name.charAt(0).toUpperCase() + name.slice(1) });
-    return { error: null };
+  const signUp = async (email: string, password: string, fullName: string) => {
+    try {
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      const trimmedName = fullName.trim();
+
+      if (trimmedName) {
+        await updateProfile(credential.user, { displayName: trimmedName });
+      }
+
+      await sendEmailVerification(credential.user);
+      const syncResult = await syncRegisteredUser(credential.user, "password");
+      if (syncResult?.error) {
+        await firebaseSignOut(auth);
+        setUser(null);
+        return syncResult;
+      }
+
+      await firebaseSignOut(auth);
+      setUser(null);
+
+      return {
+        error: null,
+        message: "Account created. Verification email sent.",
+      };
+    } catch (error) {
+      return { error: formatAuthError(error) };
+    }
   };
 
-  const signUp = async (email: string, _password: string, fullName: string) => {
-    persist({ id: "demo-user", email, full_name: fullName || "Demo User" });
-    return { error: null };
+  const signInWithGoogle = async () => {
+    try {
+      const credential = await signInWithPopup(auth, googleProvider);
+      const normalizedName = getFullName(credential.user);
+
+      if (credential.user.displayName !== normalizedName) {
+        await updateProfile(credential.user, { displayName: normalizedName });
+      }
+
+      const syncResult = await syncRegisteredUser(credential.user, "google");
+      if (syncResult?.error) {
+        await firebaseSignOut(auth);
+        return syncResult;
+      }
+
+      return { error: null, message: "Signed in with Google." };
+    } catch (error) {
+      return { error: formatAuthError(error) };
+    }
+  };
+
+  const signInWithApple = async () => {
+    try {
+      const credential = await signInWithPopup(auth, appleProvider);
+      const syncResult = await syncRegisteredUser(credential.user, "apple");
+      if (syncResult?.error) {
+        await firebaseSignOut(auth);
+        return syncResult;
+      }
+
+      return { error: null, message: "Signed in with Apple." };
+    } catch (error) {
+      return { error: formatAuthError(error) };
+    }
   };
 
   const signOut = async () => {
-    persist(null);
+    await firebaseSignOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider
+      value={{ user, loading, signIn, signUp, signInWithGoogle, signInWithApple, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   );

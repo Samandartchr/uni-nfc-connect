@@ -100,7 +100,8 @@ export const initialPosts: MockPost[] = [
     author_id: "p1",
     author_name: "Алексей Романов",
     faculty: "Software Engineering",
-    content: "Запускаем закрытое бета-тестирование AI-планировщика для студентов. Кому интересно — пишите!",
+    content:
+      "Запускаем закрытое бета-тестирование AI-планировщика для студентов. Кому интересно — пишите!",
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
     likes_count: 24,
     comments_count: 5,
@@ -110,7 +111,8 @@ export const initialPosts: MockPost[] = [
     author_id: "p2",
     author_name: "Елена Волкова",
     faculty: "Linguistics",
-    content: "Встреча киноклуба в этот четверг! Обсуждаем «Интерстеллар». Ждём всех в 18:00 в коворкинге.",
+    content:
+      "Встреча киноклуба в этот четверг! Обсуждаем «Интерстеллар». Ждём всех в 18:00 в коворкинге.",
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
     likes_count: 12,
     comments_count: 3,
@@ -138,7 +140,12 @@ export const initialPosts: MockPost[] = [
 ];
 
 export const friends: { id: string; name: string; faculty: string; lastMessage: string }[] = [
-  { id: "p1", name: "Алексей Романов", faculty: "Software Engineering", lastMessage: "Скинул бриф проекта 👌" },
+  {
+    id: "p1",
+    name: "Алексей Романов",
+    faculty: "Software Engineering",
+    lastMessage: "Скинул бриф проекта 👌",
+  },
   { id: "p4", name: "Динара Аман", faculty: "Design", lastMessage: "Готова созвониться завтра" },
   { id: "p3", name: "Ержан Қайратұлы", faculty: "Mathematics", lastMessage: "Тренировка в 19:00" },
 ];
