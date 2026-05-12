@@ -12,6 +12,7 @@ import AuthPage from "@/pages/Auth";
 import FeedPage from "@/pages/Feed";
 import GrowPage from "@/pages/Grow";
 import MessagesPage from "@/pages/Messages";
+import PostPage from "@/pages/Post";
 import ProfilePage from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
 
@@ -30,8 +31,10 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/feed" element={<FeedPage />} />
               <Route path="/grow" element={<GrowPage />} />
+              <Route path="/post" element={<PostPage />} />
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/profile/:userId" element={<ProfilePage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

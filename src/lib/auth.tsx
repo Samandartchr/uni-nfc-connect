@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -40,7 +47,6 @@ const AuthContext = createContext<AuthCtx | null>(null);
 function toAuthUser(user: User): AuthUser {
   const fallbackName =
     user.displayName?.trim() || user.email?.split("@")[0]?.trim() || "UniConnect User";
-
   return {
     id: user.uid,
     email: user.email ?? "",
@@ -57,7 +63,8 @@ function isPasswordUser(user: User) {
   return user.providerData.some((provider) => provider.providerId === "password");
 }
 
-async function syncRegisteredUser(user: User, provider: "password" | "google" | "apple") {
+// Only called during registration (signUp + OAuth first time)
+async function registerUser(user: User) {
   try {
     const response = await callApiRequest({
       Email: user.email ?? "",
@@ -110,13 +117,15 @@ function formatAuthError(error: unknown) {
         break;
     }
   }
-
   return "Authentication failed. Please try again.";
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Ref flag to prevent onAuthStateChanged from interfering during signUp flow
+  const signingUp = useRef(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
@@ -128,9 +137,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       await reload(nextUser);
 
+      // Only block unverified password users — but never during active signUp
       if (isPasswordUser(nextUser) && !nextUser.emailVerified) {
-        await firebaseSignOut(auth);
-        setUser(null);
+        if (!signingUp.current) {
+          await firebaseSignOut(auth);
+          setUser(null);
+        }
         setLoading(false);
         return;
       }
@@ -142,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<AuthResult> => {
     try {
       const credential = await signInWithEmailAndPassword(auth, email, password);
       await reload(credential.user);
@@ -152,19 +164,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: "Please verify your email before signing in." };
       }
 
-      const syncResult = await syncRegisteredUser(credential.user, "password");
-      if (syncResult?.error) {
-        await firebaseSignOut(auth);
-        return syncResult;
-      }
-
+      setUser(toAuthUser(credential.user));
       return { error: null, message: "Welcome back!" };
     } catch (error) {
       return { error: formatAuthError(error) };
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    fullName: string,
+  ): Promise<AuthResult> => {
+    signingUp.current = true;
     try {
       const credential = await createUserWithEmailAndPassword(auth, email, password);
       const trimmedName = fullName.trim();
@@ -174,10 +186,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       await sendEmailVerification(credential.user);
-      const syncResult = await syncRegisteredUser(credential.user, "password");
-      if (syncResult?.error) {
-        await firebaseSignOut(auth);
-        setUser(null);
+
+      // Register with backend only on account creation
+      const syncResult = await registerUser(credential.user);
+      if (syncResult.error) {
+        // Clean up: delete the firebase account so the user can retry cleanly
+        await credential.user.delete().catch(() => null);
         return syncResult;
       }
 
@@ -186,14 +200,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return {
         error: null,
-        message: "Account created. Verification email sent.",
+        message: "Account created! Check your email to verify your account.",
       };
     } catch (error) {
       return { error: formatAuthError(error) };
+    } finally {
+      signingUp.current = false;
     }
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (): Promise<AuthResult> => {
     try {
       const credential = await signInWithPopup(auth, googleProvider);
       const normalizedName = getFullName(credential.user);
@@ -202,27 +218,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await updateProfile(credential.user, { displayName: normalizedName });
       }
 
-      const syncResult = await syncRegisteredUser(credential.user, "google");
-      if (syncResult?.error) {
+      // For OAuth, upsert the user on the backend (handles both new and returning users)
+      const syncResult = await registerUser(credential.user);
+      if (syncResult.error) {
         await firebaseSignOut(auth);
         return syncResult;
       }
 
+      setUser(toAuthUser(credential.user));
       return { error: null, message: "Signed in with Google." };
     } catch (error) {
       return { error: formatAuthError(error) };
     }
   };
 
-  const signInWithApple = async () => {
+  const signInWithApple = async (): Promise<AuthResult> => {
     try {
       const credential = await signInWithPopup(auth, appleProvider);
-      const syncResult = await syncRegisteredUser(credential.user, "apple");
-      if (syncResult?.error) {
+
+      const syncResult = await registerUser(credential.user);
+      if (syncResult.error) {
         await firebaseSignOut(auth);
         return syncResult;
       }
 
+      setUser(toAuthUser(credential.user));
       return { error: null, message: "Signed in with Apple." };
     } catch (error) {
       return { error: formatAuthError(error) };

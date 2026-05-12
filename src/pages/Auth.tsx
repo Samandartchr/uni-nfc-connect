@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Lock, Mail, User as UserIcon, Chrome } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,54 +12,74 @@ export default function AuthPage() {
   const { t } = useI18n();
   const { user, signIn, signUp, signInWithGoogle, signInWithApple } = useAuth();
   const navigate = useNavigate();
+
   const [mode, setMode] = useState<"in" | "up">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [providerLoading, setProviderLoading] = useState<null | "google" | "apple">(null);
-  const [authActionInProgress, setAuthActionInProgress] = useState(false);
 
+  // useRef instead of useState — avoids stale closure issue in the effect below
+  const authInProgress = useRef(false);
+
+  // Redirect already-authenticated users, but never during an active auth operation
   useEffect(() => {
-    if (user && !authActionInProgress) navigate("/feed");
-  }, [user, authActionInProgress, navigate]);
+    if (user && !authInProgress.current) {
+      navigate("/feed", { replace: true });
+    }
+  }, [user, navigate]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAuthActionInProgress(true);
+    authInProgress.current = true;
     setLoading(true);
+
     const { error, message } =
-      mode === "in" ? await signIn(email, password) : await signUp(email, password, fullName);
+      mode === "in"
+        ? await signIn(email, password)
+        : await signUp(email, password, fullName);
+
     setLoading(false);
-    setAuthActionInProgress(false);
-    if (error) {
-      toast.error(error);
-    } else {
-      toast.success(message ?? (mode === "in" ? "Welcome back!" : "Account created!"));
-      if (mode === "in") {
-        navigate("/feed");
-      } else {
-        setMode("in");
-        setPassword("");
-      }
-    }
-  };
-
-  const onProviderSignIn = async (provider: "google" | "apple") => {
-    setAuthActionInProgress(true);
-    setProviderLoading(provider);
-    const { error, message } =
-      provider === "google" ? await signInWithGoogle() : await signInWithApple();
-    setProviderLoading(null);
-    setAuthActionInProgress(false);
 
     if (error) {
+      authInProgress.current = false;
       toast.error(error);
       return;
     }
 
-    toast.success(message ?? (provider === "google" ? "Signed in with Google." : "Signed in with Apple."));
-    navigate("/feed");
+    toast.success(message ?? (mode === "in" ? "Welcome back!" : "Account created!"));
+
+    if (mode === "in") {
+      // Let the useEffect handle navigation once user state is set by onAuthStateChanged
+      // authInProgress stays true so the effect doesn't double-fire; it resets after navigation
+      authInProgress.current = false;
+    } else {
+      // signUp signs the user out internally, so no navigation needed — just switch to sign-in
+      authInProgress.current = false;
+      setMode("in");
+      setPassword("");
+    }
+  };
+
+  const onProviderSignIn = async (provider: "google" | "apple") => {
+    authInProgress.current = true;
+    setProviderLoading(provider);
+
+    const { error, message } =
+      provider === "google" ? await signInWithGoogle() : await signInWithApple();
+
+    setProviderLoading(null);
+
+    if (error) {
+      authInProgress.current = false;
+      toast.error(error);
+      return;
+    }
+
+    toast.success(message ?? `Signed in with ${provider === "google" ? "Google" : "Apple"}.`);
+    // Let useEffect navigate once onAuthStateChanged sets user
+    authInProgress.current = false;
   };
 
   return (
@@ -72,6 +92,7 @@ export default function AuthPage() {
         >
           <ArrowLeft className="h-4 w-4" /> UniConnect
         </Link>
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -97,6 +118,7 @@ export default function AuthPage() {
                 />
               </Field>
             )}
+
             <Field icon={Mail}>
               <Input
                 type="email"
@@ -107,6 +129,7 @@ export default function AuthPage() {
                 className="border-0 bg-transparent pl-10"
               />
             </Field>
+
             <Field icon={Lock}>
               <Input
                 type="password"
@@ -123,10 +146,10 @@ export default function AuthPage() {
               type="submit"
               variant="hero"
               size="lg"
-              disabled={loading}
+              disabled={loading || providerLoading !== null}
               className="mt-2 w-full"
             >
-              {loading ? "..." : t(mode === "in" ? "auth.submit.in" : "auth.submit.up")}
+              {loading ? "…" : t(mode === "in" ? "auth.submit.in" : "auth.submit.up")}
             </Button>
           </form>
 
@@ -136,23 +159,28 @@ export default function AuthPage() {
             <div className="h-px flex-1 bg-border/70" />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols">
+          <div className="grid gap-3">
             <Button
               type="button"
               variant="glass"
               size="lg"
-              disabled={providerLoading !== null}
+              disabled={loading || providerLoading !== null}
               onClick={() => onProviderSignIn("google")}
               className="w-full"
             >
               <Chrome className="h-4 w-4" />
-              {providerLoading === "google" ? "Connecting..." : "Google"}
+              {providerLoading === "google" ? "Connecting…" : "Google"}
             </Button>
           </div>
 
           <button
             type="button"
-            onClick={() => setMode(mode === "in" ? "up" : "in")}
+            onClick={() => {
+              setMode(mode === "in" ? "up" : "in");
+              setEmail("");
+              setPassword("");
+              setFullName("");
+            }}
             className="mt-5 w-full text-center text-sm text-muted-foreground hover:text-foreground"
           >
             {t(mode === "in" ? "auth.toggle.up" : "auth.toggle.in")}
