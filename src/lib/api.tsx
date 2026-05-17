@@ -9,8 +9,8 @@ export async function getToken(): Promise<string | null> {
   return user.getIdToken();
 }
 
-//const apiUrl = import.meta.env.VITE_API_URL ?? "https://my-web-api-1082434380661.us-central1.run.app/api";
-const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:5165/api";
+export const apiUrl = import.meta.env.VITE_API_URL ?? "https://my-web-api-1082434380661.us-central1.run.app/api";
+//export const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:5165/api";
 const postPageSize = 10;
 
 const endpoints = {
@@ -56,6 +56,8 @@ export interface UserRegister {
 
 export interface UserPublic extends UserRegister {
   ProfileImageLink?: string | null;
+  ProfileImagePath?: string | null;
+  ProfileImageUrl?: string | null;
   ID: string;
   Specialization?: string | null;
   Grade: number;
@@ -125,6 +127,8 @@ export async function getProfile() {
   const response = await apiRequest("user", "getprofile", "GET");
   return readApiResponse<UserProfile>(response);
 }
+
+
 
 export async function updateProfile(payload: UserProfile) {
   const response = await apiRequest("user", "updateprofile", "POST", payload);
@@ -366,4 +370,88 @@ function readRecord(source: Record<string, unknown>, key: string, camelKey: stri
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+// ─── ADD THESE TYPES AND FUNCTIONS TO src/lib/api.tsx ───────────────────────
+// Place Message interface after the Comment interface (~line 130)
+// Place the chat functions after the likePost function
+// ─── ADD THESE TYPES AND FUNCTIONS TO src/lib/api.tsx ───────────────────────
+// Place Message interface after the Comment interface (~line 130)
+// Place the chat functions after the likePost function
+
+export interface Message {
+  MessageID: string;
+  SenderID: string;
+  Timestamp: string;
+  Text: string;
+}
+
+export interface ChatEntry {
+  user: UserPublic;
+  messages: Message[];
+}
+
+// ─── PARSE HELPERS (internal) ───────────────────────────────────────────────
+function toMessage(value: unknown): Message {
+  const raw = isRecord(value) ? value : {};
+  return {
+    MessageID: readString(raw, "MessageID", "messageID", crypto.randomUUID()),
+    SenderID: readString(raw, "SenderID", "senderID", ""),
+    Timestamp: readTimestamp(raw, "Timestamp", "timestamp"),
+    Text: readString(raw, "Text", "text", ""),
+  };
+}
+
+function toChatEntry(value: unknown): ChatEntry | null {
+  if (!isRecord(value)) return null;
+  const friendRaw = value["Friend"] ?? value["friend"];
+  const messagesRaw = value["Messages"] ?? value["messages"];
+  const user = toUserPublic(friendRaw);
+  if (!user.ID) return null;
+  return {
+    user,
+    messages: Array.isArray(messagesRaw) ? messagesRaw.map(toMessage) : [],
+  };
+}
+
+// ─── PUBLIC API FUNCTIONS ───────────────────────────────────────────────────
+
+/**
+ * GET chat/getchat
+ * Returns List<ChatDTO> where ChatDTO = { Friend: UserPublic, Messages: List<Message> }
+ */
+export async function getChats(): Promise<ChatEntry[]> {
+  const response = await apiRequest("chat", "getchat", "GET");
+  const data = await readApiResponse<unknown>(response);
+
+  if (Array.isArray(data)) {
+    return data.map(toChatEntry).filter((x): x is ChatEntry => x !== null);
+  }
+
+  return [];
+}
+
+/**
+ * POST chat/start
+ * Body: { RecipientID: string }
+ */
+export async function startChat(recipientID: string): Promise<void> {
+  const response = await apiRequest("chat", "start", "POST", { RecipientID: recipientID });
+  await readApiResponse<unknown>(response);
+}
+
+export interface SendMessagePayload {
+  RecipientID: string;
+  Text: string;
+}
+
+/**
+ * POST chat/sendmessage
+ */
+export async function sendMessage(payload: SendMessagePayload): Promise<Message | null> {
+  const response = await apiRequest("chat", "sendmessage", "POST", payload);
+  const data = await readApiResponse<unknown>(response);
+  if (!isRecord(data)) return null;
+  const raw = data["Message"] ?? data["message"] ?? data;
+  return toMessage(raw);
 }

@@ -15,5 +15,11 @@ export default defineConfig({
     host: "::",
     port: 8080,
     strictPort: true,
+    /*proxy: {
+      "/api": {
+        target: "https://my-web-api-1082434380661.us-central1.run.app",
+        changeOrigin: true,
+      },
+    },*/
   },
 });
